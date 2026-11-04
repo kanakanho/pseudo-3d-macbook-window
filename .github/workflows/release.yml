@@ -1,0 +1,89 @@
+# Mac アプリ (Pseudo3DWindow.app) をビルドして GitHub Release に置く。
+#   - v* のタグを push すると、そのタグのリリースを作り、zip を添付する
+#   - 手動実行 (workflow_dispatch) ではリリースは作らず、Actions の成果物として残す
+#
+# PLY データは元モデルの規約上配布できるか確認できていないので、リポジトリにもアプリにも含めない (build.sh が .ply の混入を検査する)。
+name: Release Mac app
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write # リリースの作成に必要
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # postinstall で MediaPipe の WASM を public/ にコピーする
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Decide version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == tag ]]; then
+            v="${GITHUB_REF_NAME#v}"
+          else
+            v="0.0.0-${GITHUB_SHA::7}"
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      # web のビルド (顔検出モデルの取得とライセンス表記の生成を含む) → Swift のビルド → .app → 署名 (ad-hoc)
+      - name: Build app
+        run: ./mac/build.sh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          UNIVERSAL: '1'
+
+      - name: Package
+        id: package
+        run: |
+          name="Pseudo3DWindow-${{ steps.version.outputs.version }}-macOS.zip"
+          # ditto は拡張属性と署名を保ったまま .app を zip にする
+          ditto -c -k --keepParent mac/build/Pseudo3DWindow.app "$name"
+          echo "zip=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.zip }}
+          path: ${{ steps.package.outputs.zip }}
+
+      - name: Create release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## インストール
+
+          1. `Pseudo3DWindow-*-macOS.zip` をダウンロードして展開し、`Pseudo3DWindow.app` をアプリケーションフォルダに移す
+          2. このアプリは Apple の公証 (notarization) を受けていないため、初回はブロックされる。
+             ターミナルで次を実行してから開く:
+
+             ```bash
+             xattr -dr com.apple.quarantine /Applications/Pseudo3DWindow.app
+             ```
+
+          3. 初回起動時にカメラの使用を許可する
+
+          PLY データは同梱していない。`/ply` (View → PLY アニメーション) でフォルダをドロップするか、
+          View → PLY フォルダを選択… で読み込む。
+          EOF
+          gh release create "$GITHUB_REF_NAME" "${{ steps.package.outputs.zip }}" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag

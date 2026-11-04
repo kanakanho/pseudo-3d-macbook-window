@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pseudo 3D Window</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+      canvas {
+        display: block;
+      }
+      #hud {
+        position: fixed;
+        left: 12px;
+        top: 12px;
+        margin: 0;
+        padding: 8px 10px;
+        font: 12px/1.5 ui-monospace, Menlo, monospace;
+        color: #e6e6e6;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 6px;
+        pointer-events: none;
+        white-space: pre;
+      }
+      #preview {
+        position: fixed;
+        left: 12px;
+        bottom: 12px;
+        width: 200px;
+        border-radius: 6px;
+        transform: scaleX(-1); /* 見やすいように鏡像で表示 (計算は生の映像で行う) */
+        opacity: 0.85;
+        pointer-events: none;
+      }
+      #drop-hint {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+        font: 600 18px -apple-system, system-ui, sans-serif;
+        color: rgba(255, 255, 255, 0.75);
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      }
+      #drop-hint span {
+        padding: 18px 28px;
+        border: 2px dashed rgba(255, 255, 255, 0.45);
+        border-radius: 14px;
+        background: rgba(0, 0, 0, 0.25);
+      }
+      #drop-hint.over span {
+        border-color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="drop-hint"><span>VRM ファイルをドロップ</span></div>
+    <pre id="hud"></pre>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

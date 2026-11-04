@@ -1,0 +1,27 @@
+{
+  "name": "pseudo-3d-macbook-window",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "postinstall": "rm -rf public/mediapipe-wasm && mkdir -p public && cp -R node_modules/@mediapipe/tasks-vision/wasm public/mediapipe-wasm",
+    "fetch-model": "node scripts/fetch-model.mjs",
+    "predev": "npm run fetch-model",
+    "prebuild": "npm run fetch-model",
+    "postbuild": "node scripts/collect-licenses.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.2.2",
+    "@pixiv/three-vrm": "^3.5.5",
+    "lil-gui": "^0.21.0",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}
